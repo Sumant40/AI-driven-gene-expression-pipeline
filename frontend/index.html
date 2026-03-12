@@ -2,19 +2,180 @@
 <html>
 <head>
 <title>AI Gene Biomarker Discovery</title>
+
 <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+
+<style>
+
+body{
+font-family: Arial, sans-serif;
+background: linear-gradient(120deg,#0f2027,#203a43,#2c5364);
+color:white;
+margin:0;
+padding:0;
+}
+
+header{
+padding:20px;
+text-align:center;
+font-size:28px;
+font-weight:bold;
+background:#111;
+}
+
+.container{
+display:grid;
+grid-template-columns:1fr 1fr;
+gap:20px;
+padding:20px;
+}
+
+.card{
+background:#1e293b;
+border-radius:10px;
+padding:20px;
+box-shadow:0 0 10px rgba(0,0,0,0.3);
+}
+
+button{
+padding:12px 20px;
+border:none;
+background:#3b82f6;
+color:white;
+border-radius:6px;
+cursor:pointer;
+}
+
+button:hover{
+background:#2563eb;
+}
+
+#plot{
+height:450px;
+}
+
+#aiOutput{
+white-space:pre-wrap;
+background:#0f172a;
+padding:15px;
+border-radius:6px;
+height:300px;
+overflow:auto;
+}
+
+table{
+width:100%;
+border-collapse:collapse;
+}
+
+td,th{
+border-bottom:1px solid #444;
+padding:8px;
+}
+
+.loading{
+display:none;
+font-size:18px;
+}
+
+</style>
 </head>
 
 <body>
 
-<h2>Upload Gene Expression Dataset</h2>
+<header>AI Gene Biomarker Discovery Platform</header>
 
+<div class="container">
+
+<div class="card">
+<h3>Upload Dataset</h3>
 <input type="file" id="fileInput">
-<button onclick="upload()">Run Analysis</button>
+<br><br>
+<button onclick="runAnalysis()">Run Analysis</button>
+<p class="loading" id="loading">Running analysis...</p>
+</div>
 
+<div class="card">
+<h3>AI Interpretation</h3>
+<div id="aiOutput">AI output will appear here.</div>
+</div>
+
+<div class="card">
+<h3>Volcano Plot</h3>
 <div id="plot"></div>
+</div>
 
-<script src="script.js"></script>
+<div class="card">
+<h3>Top Genes</h3>
+<table id="geneTable">
+<thead>
+<tr>
+<th>Gene</th>
+<th>logFC</th>
+<th>P Value</th>
+</tr>
+</thead>
+<tbody></tbody>
+</table>
+</div>
+
+</div>
+
+<script>
+
+async function runAnalysis(){
+
+document.getElementById("loading").style.display="block"
+
+const file=document.getElementById("fileInput").files[0]
+
+let formData=new FormData()
+formData.append("file",file)
+
+const response=await fetch("http://localhost:8000/upload",{
+method:"POST",
+body:formData
+})
+
+const result=await response.json()
+
+document.getElementById("loading").style.display="none"
+
+Plotly.newPlot(
+"plot",
+JSON.parse(result.plot).data,
+JSON.parse(result.plot).layout
+)
+
+displayGenes(result.genes)
+displayAI(result.ai)
+
+}
+
+function displayGenes(genes){
+
+let table=document.querySelector("#geneTable tbody")
+table.innerHTML=""
+
+genes.forEach(g=>{
+let row=document.createElement("tr")
+
+row.innerHTML=`
+<td>${g.gene_id}</td>
+<td>${g.logFC}</td>
+<td>${g["P.Value"]}</td>
+`
+
+table.appendChild(row)
+})
+
+}
+
+function displayAI(text){
+document.getElementById("aiOutput").innerText=text
+}
+
+</script>
 
 </body>
 </html>
