@@ -10,7 +10,7 @@ if(!"gene_id" %in% colnames(data)){
 data <- data[order(data$adj.P.Val), ]
 
 # Extract top 100 genes
-top_genes <- head(data, 5)
+top_genes <- head(data, 2)
 
 # Move gene_id column to first position
 top_genes <- top_genes[, c("gene_id", setdiff(names(top_genes), "gene_id"))]

@@ -1,41 +1,88 @@
 library(limma)
 
-# Load processed dataset
-data <- read.csv("results/processed_gene_data.csv")
+# -----------------------------
+# 1. Load dataset
+# -----------------------------
 
-# First column contains gene IDs
+data <- read.csv("results/processed_gene_data.csv",
+                 check.names = FALSE)
+
+# Extract gene IDs
 gene_ids <- data[,1]
 
 # Expression matrix
 expr <- as.matrix(data[,-1])
 
-# Example group assignment
-# Adjust according to your dataset
-group <- factor(c(rep("Control", 43), rep("Disease", 43)))
+# Convert to numeric
+expr <- apply(expr, 2, as.numeric)
 
-# Design matrix
+# -----------------------------
+# 2. Check matrix orientation
+# -----------------------------
+
+# If genes appear as columns (rare case)
+if(nrow(expr) < ncol(expr)) {
+  expr <- t(expr)
+}
+
+# Number of samples
+num_samples <- ncol(expr)
+
+cat("Total samples detected:", num_samples, "\n")
+
+# -----------------------------
+# 3. Automatically create groups
+# -----------------------------
+
+# Default: split samples into two groups
+group <- factor(rep(c("Control","Disease"),
+                    length.out = num_samples))
+
+cat("Group distribution:\n")
+print(table(group))
+
+# -----------------------------
+# 4. Build design matrix
+# -----------------------------
+
 design <- model.matrix(~group)
 
-# Fit model
+# Safety check
+if(nrow(design) != ncol(expr)){
+  stop("Design matrix and expression matrix dimensions do not match.")
+}
+
+# -----------------------------
+# 5. Fit linear model
+# -----------------------------
+
 fit <- lmFit(expr, design)
 
-# Apply empirical Bayes
+# Empirical Bayes moderation
 fit <- eBayes(fit)
 
-# Extract results
-results <- topTable(fit, coef=2, number=Inf)
+# -----------------------------
+# 6. Extract differential genes
+# -----------------------------
+
+results <- topTable(fit,
+                    coef = 2,
+                    number = Inf,
+                    adjust.method = "fdr")
 
 # Add gene IDs
 results$gene_id <- gene_ids
 
-# Move gene_id to first column
-results <- results[, c("gene_id", setdiff(names(results), "gene_id"))]
+# Move gene_id column to front
+results <- results[, c("gene_id",
+                       setdiff(names(results), "gene_id"))]
 
-# Save results
-write.csv(
-  results,
-  "results/differential_gene_results.csv",
-  row.names = FALSE
-)
+# -----------------------------
+# 7. Save results
+# -----------------------------
 
-print("Differential expression results saved")
+write.csv(results,
+          "results/differential_gene_results.csv",
+          row.names = FALSE)
+
+cat("Differential expression analysis completed.\n")
