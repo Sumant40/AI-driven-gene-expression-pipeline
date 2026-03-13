@@ -3,7 +3,7 @@
 <head>
 <title>AI Gene Biomarker Discovery</title>
 
-<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+<script src="https://cdn.plot.ly/plotly-2.30.0.min.js"></script>
 
 <style>
 
@@ -59,8 +59,11 @@ white-space:pre-wrap;
 background:#0f172a;
 padding:15px;
 border-radius:6px;
-height:300px;
-overflow:auto;
+height:350px;
+overflow-y:auto;
+overflow-x:hidden;
+line-height:1.6;
+font-size:15px;
 }
 
 table{
@@ -89,25 +92,37 @@ font-size:18px;
 
 <div class="card">
 <h3>Upload Dataset</h3>
+
 <input type="file" id="fileInput">
+
 <br><br>
+
 <button onclick="runAnalysis()">Run Analysis</button>
+
 <p class="loading" id="loading">Running analysis...</p>
+
 </div>
 
 <div class="card">
 <h3>AI Interpretation</h3>
+
 <div id="aiOutput">AI output will appear here.</div>
+
 </div>
 
 <div class="card">
 <h3>Volcano Plot</h3>
+
 <div id="plot"></div>
+
 </div>
 
 <div class="card">
+
 <h3>Top Genes</h3>
+
 <table id="geneTable">
+
 <thead>
 <tr>
 <th>Gene</th>
@@ -115,8 +130,11 @@ font-size:18px;
 <th>P Value</th>
 </tr>
 </thead>
+
 <tbody></tbody>
+
 </table>
+
 </div>
 
 </div>
@@ -125,12 +143,24 @@ font-size:18px;
 
 async function runAnalysis(){
 
-document.getElementById("loading").style.display="block"
+const loading=document.getElementById("loading")
+const fileInput=document.getElementById("fileInput")
+const aiBox=document.getElementById("aiOutput")
 
-const file=document.getElementById("fileInput").files[0]
+if(fileInput.files.length===0){
+alert("Please upload a dataset")
+return
+}
+
+loading.style.display="block"
+aiBox.innerText="Running AI analysis..."
+
+const file=fileInput.files[0]
 
 let formData=new FormData()
 formData.append("file",file)
+
+try{
 
 const response=await fetch("http://localhost:8000/upload",{
 method:"POST",
@@ -139,16 +169,37 @@ body:formData
 
 const result=await response.json()
 
-document.getElementById("loading").style.display="none"
+console.log("Backend response:",result)
+
+loading.style.display="none"
+
+/* Volcano Plot */
+
+const plotData=JSON.parse(result.plot)
 
 Plotly.newPlot(
 "plot",
-JSON.parse(result.plot).data,
-JSON.parse(result.plot).layout
+plotData.data,
+plotData.layout
 )
 
+/* Gene Table */
+
 displayGenes(result.genes)
+
+/* AI Interpretation */
+
 displayAI(result.ai)
+
+}
+catch(error){
+
+loading.style.display="none"
+console.error(error)
+
+aiBox.innerText="Error running analysis"
+
+}
 
 }
 
@@ -158,21 +209,32 @@ let table=document.querySelector("#geneTable tbody")
 table.innerHTML=""
 
 genes.forEach(g=>{
+
 let row=document.createElement("tr")
 
 row.innerHTML=`
 <td>${g.gene_id}</td>
-<td>${g.logFC}</td>
-<td>${g["P.Value"]}</td>
+<td>${Number(g.logFC).toFixed(3)}</td>
+<td>${Number(g["P.Value"]).toExponential(2)}</td>
 `
 
 table.appendChild(row)
+
 })
 
 }
 
 function displayAI(text){
-document.getElementById("aiOutput").innerText=text
+
+const aiBox=document.getElementById("aiOutput")
+
+if(!text){
+aiBox.innerText="No AI interpretation returned"
+return
+}
+
+aiBox.innerText=text
+
 }
 
 </script>
