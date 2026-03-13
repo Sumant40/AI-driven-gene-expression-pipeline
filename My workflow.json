@@ -1,0 +1,219 @@
+{
+  "name": "My workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "gene-analysis",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        -96
+      ],
+      "id": "ec0cd578-140a-4425-9ff7-d8b91cbbfda7",
+      "name": "Webhook",
+      "webhookId": "8b5b5c2c-6ae5-4337-a2ec-4ec0acb2bf0d"
+    },
+    {
+      "parameters": {
+        "jsCode": "const genes = $json.body.genes;\n\nreturn genes.map(gene => {\n  return {\n    json: {\n      gene_id: gene\n    }\n  };\n});\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        -96
+      ],
+      "id": "3ddeaa8b-ddbc-47f7-ba78-bfc3a7cce21f",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "gene_id",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        448,
+        -96
+      ],
+      "id": "8a8c0021-c814-4204-a5f5-c357cbe04a1a",
+      "name": "Split Out"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Analyze the following gene:\n\n{{$json.gene_id}}\n\nExplain:\n1. Gene function\n2. Disease associations\n3. Biological pathways\n4. Biomarker potential",
+        "options": {
+          "systemMessage": "=You are a bioinformatics expert."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        672,
+        -96
+      ],
+      "id": "e10c0f80-7e29-4845-82e6-ffdac1b514fb",
+      "name": "AI Agent",
+      "retryOnFail": false,
+      "executeOnce": false
+    },
+    {
+      "parameters": {
+        "respondWith": "allIncomingItems",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        1184,
+        -96
+      ],
+      "id": "a2ec3c86-0d00-4d20-883d-b6352a3d3882",
+      "name": "Respond to Webhook",
+      "executeOnce": false,
+      "alwaysOutputData": false
+    },
+    {
+      "parameters": {
+        "model": "phi3:latest",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOllama",
+      "typeVersion": 1,
+      "position": [
+        672,
+        96
+      ],
+      "id": "a6496932-bc9e-44ee-970a-072875b2e167",
+      "name": "Ollama Chat Model",
+      "credentials": {
+        "ollamaApi": {
+          "id": "5einfT3hUANJekYp",
+          "name": "Ollama account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "61235475-f212-4c0e-96a8-e661500bb6b4",
+              "name": "analysis",
+              "value": "={{$json.output}}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1024,
+        -96
+      ],
+      "id": "526ee1ed-84d9-473a-a284-cdc395223166",
+      "name": "Edit Fields"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Split Out",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Out": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ollama Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Respond to Webhook": {
+      "main": [
+        []
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v0",
+    "binaryMode": "separate",
+    "availableInMCP": false,
+    "timeSavedMode": "fixed",
+    "callerPolicy": "workflowsFromSameOwner",
+    "timeSavedPerExecution": 30,
+    "executionTimeout": 3000,
+    "redactionPolicy": "none"
+  },
+  "versionId": "1e93fd6c-6961-4b73-b7f9-8076178c277b",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "0e582fde96dea9cd33826933355792a906b2ece04ff8ce603a61b8d8c8e210d1"
+  },
+  "id": "YDrdMKhMub3FO9E5",
+  "tags": []
+}
